@@ -22,7 +22,6 @@ def get_all_user_agents():
 				line = line.strip()
 				if line:
 					array.append(line)
-		stream.close()
 	return array if array else [default_agent]
 
 def get_random_user_agent():
