@@ -1,17 +1,12 @@
 #!/usr/bin/env python3
 
-import os
-import random
-import time
-import urllib.parse
-import requests
+import json, os, random, re, requests, time, urllib.parse
+
 from bs4 import BeautifulSoup
-import re
-import json
 
 requests.packages.urllib3.disable_warnings(requests.packages.urllib3.exceptions.InsecureRequestWarning)
 
-default_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.72 Safari/537.36"
+default_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
 
 def get_all_user_agents():
 	array = []
@@ -29,7 +24,8 @@ def get_random_user_agent():
 	return array[random.randint(0, len(array) - 1)]
 
 def get_tbs(date_from, date_to):
-	return ("cdr:1,cd_min:{0},cd_max:{1}").format(date_from.strftime("%m/%d/%Y"), date_to.strftime("%m/%d/%Y"))
+	date_format = "%m/%d/%Y"
+	return ("cdr:1,cd_min:{0},cd_max:{1}").format(date_from.strftime(date_format), date_to.strftime(date_format))
 
 class SearchClient:
 

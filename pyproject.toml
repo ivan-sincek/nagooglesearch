@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "nagooglesearch"
-version = "6.9"
+version = "7.0"
 authors = [{ name = "Ivan Sincek" }]
 description = "Not another Google searching tool."
 readme = "README.md"
@@ -14,7 +14,7 @@ classifiers = [
 	"License :: OSI Approved :: MIT License",
 	"Operating System :: OS Independent"
 ]
-dependencies = ["requests>=2.27.1", "bs4>=0.0.1", "beautifulsoup4>=4.11.1"]
+dependencies = ["requests>=2.31.0", "bs4>=0.0.1", "beautifulsoup4>=4.12.3"]
 
 [project.urls]
 "Homepage" = "https://github.com/ivan-sincek/nagooglesearch"

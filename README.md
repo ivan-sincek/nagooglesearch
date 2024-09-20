@@ -25,7 +25,7 @@ python3 -m pip install --upgrade build
 
 python3 -m build
 
-python3 -m pip install dist/nagooglesearch-6.9-py3-none-any.whl
+python3 -m pip install dist/nagooglesearch-7.0-py3-none-any.whl
 ```
 
 ## Usage
