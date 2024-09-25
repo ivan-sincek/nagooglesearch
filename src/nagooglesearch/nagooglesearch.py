@@ -53,6 +53,7 @@ class SearchClient:
 		self.__session = None
 		self.__proxies = self.__get_proxies(proxy)
 		self.__headers = self.__get_headers(user_agent)
+		self.__cookies = self.__get_cookies()
 		self.__rate_limit = "429_TOO_MANY_REQUESTS"
 		self.__exception = "REQUESTS_EXCEPTION"
 
@@ -97,6 +98,13 @@ class SearchClient:
 		self.__debug("Headers", headers, True)
 		return headers
 
+	def __get_cookies(self):
+		cookies = {
+			"SOCS": "CAESHAgCEhJnd3NfMjAyNDA5MjMtMF9SQzEaAmRlIAEaBgiApc23Bg" # NOTE: Lasts for 13 months, created on 2024-09-23.
+		}
+		self.__debug("Cookies", cookies, True)
+		return cookies
+
 	def __set_pagination(self, key, value):
 		try:
 			self.__pagination[key] = int(value)
@@ -105,7 +113,7 @@ class SearchClient:
 
 	def __get_urls(self, tld, parameters, homepage_parameters):
 		tmp = {
-			"homepage": ("https://www.google.{0}").format(tld.rstrip("/").lower()),
+			"homepage": ("https://www.google.{0}").format(tld.lower()),
 			"search": "",
 			"homepage_search": "",
 			"const": "?"
@@ -167,7 +175,7 @@ class SearchClient:
 			key = "CONSENT"
 			if key in cookies and re.search(r"PENDING\+[\d]+", cookies[key], re.IGNORECASE):
 				self.__debug("Info", ("Looks like your IP address is sourcing from the EU location. Your search results may vary. Trying to work around this by updating the '{0}' cookie...").format(key))
-				cookies[key] = ("YES+shp.gws-20211108-0-RC1.fr+F+{0}").format(cookies[key].split("+", 1)[-1])
+				cookies[key] = ("YES+shp.gws-20240923-0-RC1.fr+F+{0}").format(cookies[key].split("+", 1)[-1])
 				self.__session.cookies.clear()
 				self.__session.cookies.update(cookies)
 			self.__debug("Cookies", self.__session.cookies.get_dict(), True)
@@ -188,6 +196,7 @@ class SearchClient:
 		if self.__urls["search"]:
 			self.__session = requests.Session()
 			self.__session.max_redirects = 10
+			self.__session.cookies.update(self.__cookies)
 			self.__get_page(self.__urls["homepage"])
 			while True:
 				time.sleep(random.randint(self.__min_sleep, self.__max_sleep))
