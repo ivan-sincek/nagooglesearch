@@ -25,7 +25,7 @@ python3 -m pip install --upgrade build
 
 python3 -m build
 
-python3 -m pip install dist/nagooglesearch-7.1-py3-none-any.whl
+python3 -m pip install dist/nagooglesearch-7.2-py3-none-any.whl
 ```
 
 ## Usage
@@ -91,19 +91,19 @@ client = nagooglesearch.SearchClient(
 
 urls = client.search()
 
-if client.get_current_error() == client.get_init_error(): # INIT_ERROR
-    print("[ Initialization Error ]")
-    # do something
-elif client.get_current_error() == client.get_requests_error(): # REQUESTS_ERROR
-    print("[ Requests Exception ]")
-    # do something
-elif client.get_current_error() == client.get_rate_limit_error(): # 429_TOO_MANY_REQUESTS
-    print("[ HTTP 429 Too Many Requests ]")
-    # do something
+if client.get_current_error() == "INIT_ERROR":
+	print("[ Initialization Error ]")
+	# do something
+elif client.get_current_error() == "REQUESTS_ERROR":
+	print("[ Requests Exception ]")
+	# do something
+elif client.get_current_error() == "429_TOO_MANY_REQUESTS":
+	print("[ HTTP 429 Too Many Requests ]")
+	# do something
 
 for url in urls:
-    print(url)
-    # do something
+	print(url)
+	# do something
 ```
 
 If `max_results` is set to e.g. `200` and `num` is set to e.g. `80`, then, maximum unique urls to return could actually reach `240`.

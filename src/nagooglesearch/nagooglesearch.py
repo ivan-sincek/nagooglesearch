@@ -62,15 +62,6 @@ class SearchClient:
 	def get_current_error(self):
 		return self.__current_error
 
-	def get_init_error(self):
-		return self.__init_error
-
-	def get_requests_error(self):
-		return self.__requests_error
-
-	def get_rate_limit_error(self):
-		return self.__rate_limit_error
-
 	def __jdump(self, data):
 		return json.dumps(data, indent = 4, ensure_ascii = False)
 
