@@ -29,6 +29,11 @@ def get_tbs(date_from, date_to):
 
 class SearchClient:
 
+	__current_error = ""
+	__init_error = "INIT_ERROR"
+	__requests_error = "REQUESTS_ERROR"
+	__rate_limit_error = "429_TOO_MANY_REQUESTS"
+
 	def __init__(
 		self,
 		tld = "com",
@@ -42,192 +47,211 @@ class SearchClient:
 		proxy = "",
 		min_sleep = 8,
 		max_sleep = 18,
-		verbose = False
+		debug = False
 	):
-		self.__verbose = verbose
-		self.__max_sleep = max_sleep
-		self.__min_sleep = min_sleep
-		self.__max_results = max_results
-		self.__pagination = {"start": 0, "num": 10}
+		self.__debug = debug
+		self.__pagination = self.__get_pagination(parameters)
 		self.__urls = self.__get_urls(tld, parameters, homepage_parameters)
-		self.__session = None
-		self.__proxies = self.__get_proxies(proxy)
 		self.__headers = self.__get_headers(user_agent)
 		self.__cookies = self.__get_cookies()
-		self.__rate_limit = "429_TOO_MANY_REQUESTS"
-		self.__exception = "REQUESTS_EXCEPTION"
+		self.__proxies = self.__get_proxies(proxy)
+		self.__max_results = self.__get_max_results(max_results)
+		self.__min_sleep = self.__get_min_sleep(min_sleep)
+		self.__max_sleep = self.__get_max_sleep(max_sleep)
 
-	def get_rate_limit(self):
-		return self.__rate_limit
+	def get_current_error(self):
+		return self.__current_error
 
-	def get_exception(self):
-		return self.__exception
+	def get_init_error(self):
+		return self.__init_error
+
+	def get_requests_error(self):
+		return self.__requests_error
+
+	def get_rate_limit_error(self):
+		return self.__rate_limit_error
 
 	def __jdump(self, data):
 		return json.dumps(data, indent = 4, ensure_ascii = False)
 
-	def __debug(self, title, text, json = False):
-		if self.__verbose:
+	def __print(self, title, text, json = False):
+		if self.__debug:
 			print(("{0}: {1}").format(title, self.__jdump(text) if json else text))
 
-	def __unique(self, array):
-		seen = set()
-		return [x for x in array if not (x in seen or seen.add(x))]
+	def __get_pagination(self, parameters):
+		pagination = {"start": 0, "num": 10}
+		for key in pagination.keys():
+			if key in parameters:
+				try:
+					pagination[key] = int(parameters[key])
+					if pagination[key] < 0:
+						self.__current_error = self.__init_error
+						self.__print("Error", ("The '{0}' query string parameter must be greater than or equal to zero.").format(key))
+				except (TypeError, ValueError):
+					self.__current_error = self.__init_error
+					self.__print("Error", ("Cannot convert the '{0}' query string parameter to the integer type.").format(key))
+		return pagination
 
-	def __get_proxies(self, proxy):
-		proxies = {}
-		if proxy:
-			proxy = urllib.parse.urlparse(proxy)
-			if proxy.scheme.lower() not in ["http", "https", "socks4", "socks4h", "socks5", "socks5h"]:
-				self.__debug("Error", "Proxy URL scheme must be either 'http', 'https', 'socks4', 'socks4h', 'socks5', or 'socks5h'. Ignoring the proxy...")
-			else:
-				proxies["http"] = proxies["https"] = proxy.geturl()
-		self.__debug("Proxies", proxies, True)
-		return proxies
+	def __get_urls(self, tld, parameters, homepage_parameters):
+		homepage_parameters.update(parameters)
+		return {
+			"homepage": self.__get_url(tld, "/"),
+			"homepage_search": self.__get_url(tld, "search", homepage_parameters),
+			"search": self.__get_url(tld, "search", parameters)
+		}
+
+	def __get_url(self, tld, path = "", parameters = {}):
+		return urllib.parse.urlunsplit(("https", ("www.google.{0}").format(str(tld).lower()), path, urllib.parse.urlencode(parameters, doseq = True) if parameters else "", ""))
 
 	def __get_headers(self, user_agent):
 		if not user_agent:
 			user_agent = get_random_user_agent()
-		headers = {
+		return {
 			"Accept": "*/*",
 			"Accept-Language": "*",
-			"Referer": self.__urls["homepage"] + "/",
+			"Referer": self.__urls["homepage"],
 			"Upgrade-Insecure-Requests": "1",
 			"User-Agent": user_agent
 		}
-		self.__debug("Headers", headers, True)
-		return headers
 
 	def __get_cookies(self):
-		cookies = {
-			"SOCS": "CAESHAgCEhJnd3NfMjAyNDA5MjMtMF9SQzEaAmRlIAEaBgiApc23Bg" # NOTE: Lasts for 13 months, created on 2024-09-23.
+		return {
+			"SOCS": "CAESHAgCEhJnd3NfMjAyNDA5MjMtMF9SQzEaAmRlIAEaBgiApc23Bg" # NOTE: New cookie consent method. This cookie is valid for 13 months, created on 2024-09-23.
 		}
-		self.__debug("Cookies", cookies, True)
-		return cookies
 
-	def __set_pagination(self, key, value):
+	def __get_proxies(self, proxy):
+		proxies = {}
+		if proxy:
+			proxy = urllib.parse.urlsplit(proxy)
+			if proxy.scheme.lower() not in ["http", "https", "socks4", "socks4h", "socks5", "socks5h"]:
+				self.__current_error = self.__init_error
+				self.__print("Error", "Proxy URL scheme must be either 'http[s]', 'socks4[h]', or 'socks5[h]'.")
+			else:
+				proxies["http"] = proxies["https"] = proxy.geturl()
+		return proxies
+
+	def __get_max_results(self, max_results):
 		try:
-			self.__pagination[key] = int(value)
-		except ValueError:
-			self.__debug("Error", ("Cannot convert '{0}' query string parameter to an integer type. Using '{1}' as a default integer value...").format(key, self.__pagination[key]))
+			max_results = int(max_results)
+			if max_results < 0:
+				self.__current_error = self.__init_error
+				self.__print("Error", "The 'max_results' parameter must be greater than or equal to zero.")
+		except (TypeError, ValueError):
+			self.__current_error = self.__init_error
+			self.__print("Error", "Cannot convert the 'max_results' parameter to the integer type.")
+		return max_results
 
-	def __get_urls(self, tld, parameters, homepage_parameters):
-		tmp = {
-			"homepage": ("https://www.google.{0}").format(tld.lower()),
-			"search": "",
-			"homepage_search": "",
-			"const": "?"
-		}
-		if "q" not in parameters:
-			self.__debug("Error", "No 'q' query string parameter was found... Ignoring all the searches...")
-		else:
-			tmp["search"] = tmp["homepage"] + "/search"
-			exists = []
-			for key in parameters:
-				if isinstance(parameters[key], str) and parameters[key] and key not in exists:
-					exists.append(key)
-					if key in ["start", "num"]:
-						self.__set_pagination(key, parameters[key])
-						if key == "start":
-							continue
-					tmp["search"] += tmp["const"] + ("{0}={1}").format(urllib.parse.quote_plus(key), urllib.parse.quote_plus(parameters[key]))
-					tmp["const"] = "&"
-			tmp["homepage_search"] = tmp["search"]
-			const = tmp["const"]
-			for key in homepage_parameters:
-				if isinstance(homepage_parameters[key], str) and homepage_parameters[key] and key not in exists:
-					exists.append(key)
-					tmp["homepage_search"] += const + ("{0}={1}").format(urllib.parse.quote_plus(key), urllib.parse.quote_plus(homepage_parameters[key]))
-					const = "&"
-		return tmp
+	def __get_min_sleep(self, min_sleep):
+		try:
+			min_sleep = int(min_sleep)
+			if min_sleep < 0:
+				self.__current_error = self.__init_error
+				self.__print("Error", "The  must be greater than or equal to zero.")
+		except (TypeError, ValueError):
+			self.__current_error = self.__init_error
+			self.__print("Error", "Cannot convert the 'min_sleep' parameter to the integer type.")
+		return min_sleep
 
-	def __get_paginated_search_url(self):
-		url = self.__urls["homepage_search"]
-		if self.__pagination["start"] != 0:
-			url = self.__urls["search"] + self.__urls["const"] + ("start={0}").format(self.__pagination["start"])
-		self.__pagination["start"] += self.__pagination["num"]
-		return url
+	def __get_max_sleep(self, max_sleep):
+		try:
+			max_sleep = int(max_sleep)
+			if max_sleep < self.__min_sleep:
+				self.__current_error = self.__init_error
+				self.__print("Error", "The 'max_sleep' parameter must be greater than or equal to 'min_sleep' parameter.")
+		except (TypeError, ValueError):
+			self.__current_error = self.__init_error
+			self.__print("Error", "Cannot convert the 'max_sleep' parameter to the integer type.")
+		return max_sleep
 
-	def __validate_url(self, url):
-		self.__debug("Anchor", url)
-		link = None
-		url = urllib.parse.urlparse(url)
-		if url.netloc and "google" not in url.netloc.lower():
-			link = url.geturl()
-		else:
-			query_string = urllib.parse.parse_qs(url.query)
-			for key in query_string:
-				if key in ["q", "u", "url"]:
-					url = urllib.parse.urlparse(query_string[key][0])
-					if url.netloc and "google" not in url.netloc.lower():
-						link = url.geturl()
-					break
-		return link
-
-	def __get_page(self, url):
-		self.__debug("Requesting", url)
+	def __get_page(self, session, url):
+		self.__print("Request", url)
 		html = ""
 		response = None
 		try:
-			response = self.__session.get(url, headers = self.__headers, proxies = self.__proxies, timeout = 30, verify = False, allow_redirects = True)
-			self.__debug("Status", response.status_code)
-			cookies = self.__session.cookies.get_dict()
-			key = "CONSENT"
-			if key in cookies and re.search(r"PENDING\+[\d]+", cookies[key], re.IGNORECASE):
-				self.__debug("Info", ("Looks like your IP address is sourcing from the EU location. Your search results may vary. Trying to work around this by updating the '{0}' cookie...").format(key))
-				cookies[key] = ("YES+shp.gws-20240923-0-RC1.fr+F+{0}").format(cookies[key].split("+", 1)[-1])
-				self.__session.cookies.clear()
-				self.__session.cookies.update(cookies)
-			self.__debug("Cookies", self.__session.cookies.get_dict(), True)
+			response = session.get(url, headers = self.__headers, verify = False, allow_redirects = True, timeout = 30)
+			self.__print("Status Code", response.status_code)
 			if response.status_code == 200:
 				html = response.text
 			elif response.status_code == 429:
-				html = self.__rate_limit
+				self.__current_error = self.__rate_limit_error
 		except (requests.packages.urllib3.exceptions.LocationParseError, requests.exceptions.RequestException) as ex:
-			self.__debug("Exception", ex)
-			html = self.__exception
+			self.__current_error = self.__requests_error
+			self.__print("Exception", ex)
 		finally:
 			if response:
 				response.close()
 		return html
 
+	def __get_paginated_search_url(self):
+		url = self.__urls["search"] + ("&start={0}").format(self.__pagination["start"]) if self.__pagination["start"] > 0 else self.__urls["homepage_search"]
+		self.__pagination["start"] += self.__pagination["num"]
+		return url
+
+	def __validate_url(self, url):
+		# self.__print("Anchor", url)
+		link = ""
+		url = urllib.parse.urlsplit(url)
+		domain = url.netloc.lower()
+		if domain and "google" not in domain and not domain.endswith("goo.gl"):
+			link = url.geturl()
+		else:
+			query_string = urllib.parse.parse_qs(url.query)
+			for key in query_string:
+				if key in ["q", "u", "url"]:
+					url = urllib.parse.urlsplit(query_string[key][0])
+					domain = url.netloc.lower()
+					if domain and "google" not in domain and not domain.endswith("goo.gl"):
+						link = url.geturl()
+						break
+		return link
+
 	def search(self):
-		results = []
-		if self.__urls["search"]:
-			self.__session = requests.Session()
-			self.__session.max_redirects = 10
-			self.__session.cookies.update(self.__cookies)
-			self.__get_page(self.__urls["homepage"])
-			while True:
-				time.sleep(random.randint(self.__min_sleep, self.__max_sleep))
-				html = self.__get_page(self.__get_paginated_search_url())
-				if html == self.__rate_limit:
-					results.append(self.__rate_limit)
-					break
-				elif html == self.__exception:
-					results.append(self.__exception)
-					break
-				soup = BeautifulSoup(html, "html.parser")
-				anchors = soup.find(id = "search")
-				if anchors:
-					anchors = anchors.find_all("a", href = True)
-				else:
-					for identifier in ["gbar", "top_nav", "searchform"]:
-						identifier = soup.find(id = identifier)
-						if identifier:
-							identifier.clear()
-					anchors = soup.find_all("a", href = True)
-				found = False
-				if anchors:
+		results = set()
+		if self.__current_error != self.__init_error:
+			self.__current_error = ""
+			self.__print("Headers", self.__headers, True)
+			self.__print("Cookies", self.__cookies, True)
+			self.__print("Proxies", self.__proxies, True)
+			session = requests.Session()
+			session.max_redirects = 10
+			session.cookies.update(self.__cookies)
+			session.proxies = self.__proxies
+			self.__get_page(session, self.__urls["homepage"])
+			if not self.__current_error:
+				cookies = session.cookies.get_dict()
+				key = "CONSENT"
+				if key in cookies and re.search(r"PENDING\+[\d]+", cookies[key], re.IGNORECASE):
+					# NOTE: Old cookie consent method.
+					self.__print("Info", ("Looks like your IP address is originating from an EU location. Your search results may vary. Attempting to work around this by updating the '{0}' cookie...").format(key))
+					cookies[key] = ("YES+shp.gws-20240923-0-RC1.fr+F+{0}").format(cookies[key].split("+", 1)[-1])
+					session.cookies.clear()
+					session.cookies.update(cookies)
+					self.__print("Updated Cookies", session.cookies.get_dict(), True)
+				while True:
+					time.sleep(random.randint(self.__min_sleep, self.__max_sleep))
+					html = self.__get_page(session, self.__get_paginated_search_url())
+					if self.__current_error:
+						break
+					soup = BeautifulSoup(html, "html.parser")
+					anchors = soup.find(id = "search")
+					if anchors:
+						anchors = anchors.find_all("a", href = True)
+					else:
+						for identifier in ["gbar", "top_nav", "searchform"]:
+							identifier = soup.find(id = identifier)
+							if identifier:
+								identifier.clear()
+						anchors = soup.find_all("a", href = True)
+					found = False
 					for anchor in anchors:
 						anchor = self.__validate_url(anchor["href"])
 						if anchor:
-							results.append(anchor)
 							found = True
-				results = self.__unique(results)
-				if not found or len(results) >= self.__max_results:
-					break
-			self.__session.close()
-			results = sorted(results, key = str.casefold)
-		self.__debug("Results", results, True)
+							results.add(anchor)
+					if not found or len(results) >= self.__max_results:
+						break
+				results = sorted(results, key = str.casefold)
+			session.close()
+		results = list(results)
+		# self.__print("Results", results, True)
 		return results
