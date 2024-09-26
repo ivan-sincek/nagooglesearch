@@ -21,7 +21,9 @@ Future plans:
 	* [Time Sensitive Search](#time-sensitive-search)
 	* [User Agents](#user-agents)
 
-## Standard Install
+## How to Install
+
+### Standard Install
 
 ```bash
 pip3 install nagooglesearch
@@ -29,7 +31,7 @@ pip3 install nagooglesearch
 pip3 install --upgrade nagooglesearch
 ```
 
-## How to Build and Install Manually
+### Build and Install From the Source
 
 Run the following commands:
 
