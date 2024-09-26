@@ -6,6 +6,10 @@ Tested on Kali Linux v2024.2 (64-bit).
 
 Made for educational purposes. I hope it will help!
 
+Future plans:
+
+* ability to set (rotate) search parameters, user agents, and proxies without the need for reinitialization.
+
 ## Table of Contents
 
 * [How to Install](#how-to-install)
