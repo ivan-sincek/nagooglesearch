@@ -1,12 +1,23 @@
 # Not Another Google Search
 
-Not another Google searching library. Just kidding, it is.
+Not another Google searching library. Just kidding - it is.
 
 Tested on Kali Linux v2024.2 (64-bit).
 
 Made for educational purposes. I hope it will help!
 
-## How to Install
+## Table of Contents
+
+* [How to Install](#how-to-install)
+	* [Standard Install](#standard-install)
+	* [Build and Install From the Source](#build-and-install-from-the-source)
+* [Usage](#usage)
+	* [Standard](#standard)
+	* [Shortest Possible](#shortest-possible)
+	* [Time Sensitive Search](#time-sensitive-search)
+	* [User Agents](#user-agents)
+
+## Standard Install
 
 ```bash
 pip3 install nagooglesearch
@@ -25,43 +36,51 @@ python3 -m pip install --upgrade build
 
 python3 -m build
 
-python3 -m pip install dist/nagooglesearch-7.2-py3-none-any.whl
+python3 -m pip install dist/nagooglesearch-7.3-py3-none-any.whl
 ```
 
 ## Usage
+
+### Standard
 
 Default values:
 
 ```python
 nagooglesearch.SearchClient(
 	tld = "com",
-	parameters = {},
 	homepage_parameters = {
 		"btnK": "Google+Search",
 		"source": "hp"
 	},
-	max_results = 100,
+	search_parameters = {},
 	user_agent = "",
 	proxy = "",
+	max_results = 100,
 	min_sleep = 8,
 	max_sleep = 18,
 	debug = False
 )
 ```
 
-**Only domains without `google` keyword are accepted as valid results. Final output is a unique and sorted list of URLs.**
+**Only domains without they keyword `google` and not ending with the keyword `goo.gl` are accepted as valid results. The final output is a unique and sorted list of URLs.**
 
----
+Example:
 
 ```python
 from nagooglesearch import nagooglesearch
 
-# non-string, empty, and duplicate query string parameters will be ignored
+# the following query string parameters are set only if 'start' query string parameter is not set or is equal to zero
+# simulate a homepage search
+homepage_parameters = {
+	"btnK": "Google+Search",
+	"source": "hp"
+}
+
 # case-sensitive
-# search the internet for more query string parameters
-parameters = {
-	"q": "site:*.example.com intext:password", # search query, required
-	"tbs": "li:1", # specify 'li:1' for verbatim search, i.e. do not search alternate spellings, etc.
+# search the internet for additional query string parameters
+search_parameters = {
+	"q": "site:*.example.com intext:password", # search query
+	"tbs": "li:1", # specify 'li:1' for verbatim search, i.e., do not search alternate spellings, etc.
 	"hl": "en",
 	"lr": "lang_en",
 	"cr": "countryUS",
@@ -70,34 +89,27 @@ parameters = {
 	"num": "80" # number of results per page
 }
 
-# this query string parameters will be set only if 'start' query string parameter is not set or is zero
-# mimic homepage search as the first request
-homepage_parameters = {
-	"btnK": "Google+Search",
-	"source": "hp"
-}
-
 client = nagooglesearch.SearchClient(
-	tld = "com", # top level domain, e.g. www.google.com or www.google.hr
-	parameters = parameters,
-	homepage_parameters = homepage_parameters,
+	tld = "com", # top level domain, e.g., www.google.com or www.google.hr
+	homepage_parameters = homepage_parameters, # 'search_parameters' will override 'homepage_parameters'
+	search_parameters = search_parameters,
+	user_agent = "curl/3.30.1", # assign a random user agent if not set or is empty
+	proxy = "socks5://127.0.0.1:9050", # ignore if the URL scheme is not 'http[s], 'socks4[h]', or 'socks5[h]'
 	max_results = 200, # maximum unique urls to return
-	user_agent = "curl/3.30.1", # assign random if not set or is empty
-	proxy = "socks5://127.0.0.1:9050", # ignore if URL scheme is not 'http[s], 'socks4[h]', or 'socks5[h]'
 	min_sleep = 15, # minimum sleep between page requests
 	max_sleep = 30, # maximum sleep between page requests
-	debug = True # debug output
+	debug = True # show debug output
 )
 
 urls = client.search()
 
-if client.get_current_error() == "INIT_ERROR":
+if client.get_error() == "INIT_ERROR":
 	print("[ Initialization Error ]")
 	# do something
-elif client.get_current_error() == "REQUESTS_ERROR":
+elif client.get_error() == "REQUESTS_EXCEPTION":
 	print("[ Requests Exception ]")
 	# do something
-elif client.get_current_error() == "429_TOO_MANY_REQUESTS":
+elif client.get_error() == "429_TOO_MANY_REQUESTS":
 	print("[ HTTP 429 Too Many Requests ]")
 	# do something
 
@@ -106,27 +118,25 @@ for url in urls:
 	# do something
 ```
 
-If `max_results` is set to e.g. `200` and `num` is set to e.g. `80`, then, maximum unique urls to return could actually reach `240`.
+If `max_results` is set to, e.g., `200` and `num` is set to, e.g., `80`, then, maximum unique urls that could be returned could actually reach `240`.
 
-Check the user agents list [here](https://github.com/ivan-sincek/nagooglesearch/blob/main/src/nagooglesearch/user_agents.txt). For more user agents, check [scrapeops.io](https://scrapeops.io).
+Check the list of user agents [here](https://github.com/ivan-sincek/nagooglesearch/blob/main/src/nagooglesearch/user_agents.txt). For more user agents, check [scrapeops.io](https://scrapeops.io).
 
-Proxy URL scheme must be either `http[s]`, `socks4[h]`, or `socks5[h]`; otherwise, proxy will be ignored.
+### Shortest Possible
 
----
-
-Shortest possible:
+Example:
 
 ```python
 from nagooglesearch import nagooglesearch
 
-urls = nagooglesearch.SearchClient(parameters = {"q": "site:*.example.com intext:password"}).search()
+urls = nagooglesearch.SearchClient(search_parameters = {"q": "site:*.example.com intext:password"}).search()
 
 # do something
 ```
 
----
+### Time Sensitive Search
 
-Time sensitive search (e.g. do not show results older than 6 months):
+Example (e.g., do not show results older than 6 months):
 
 ```python
 from nagooglesearch import nagooglesearch
@@ -136,16 +146,16 @@ def get_tbs(months):
 	today = datetime.datetime.today()
 	return nagooglesearch.get_tbs(today, today - relativedelta.relativedelta(months = months))
 
-parameters = {
+search_parameters = {
 	"tbs": get_tbs(6)
 }
 
 # do something
 ```
 
----
+### User Agents
 
-Get a random user agent:
+Example (get a random user agent):
 
 ```python
 from nagooglesearch import nagooglesearch
@@ -156,7 +166,7 @@ print(user_agent)
 # do something
 ```
 
-Get the user agents list:
+Example (get all user agents):
 
 ```python
 from nagooglesearch import nagooglesearch
