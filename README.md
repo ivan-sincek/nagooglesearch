@@ -82,7 +82,6 @@ homepage_parameters = {
 	"source": "hp"
 }
 
-# case-sensitive
 # search the internet for additional query string parameters
 search_parameters = {
 	"q": "site:*.example.com intext:password", # search query
@@ -99,8 +98,8 @@ client = nagooglesearch.SearchClient(
 	tld = "com", # top level domain, e.g., www.google.com or www.google.hr
 	homepage_parameters = homepage_parameters, # 'search_parameters' will override 'homepage_parameters'
 	search_parameters = search_parameters,
-	user_agent = "curl/3.30.1", # assign a random user agent if not set or is empty
-	proxy = "socks5://127.0.0.1:9050", # ignore if the URL scheme is not 'http[s], 'socks4[h]', or 'socks5[h]'
+	user_agent = "curl/3.30.1", # will set  a random user agent if not set or is empty
+	proxy = "socks5://127.0.0.1:9050", # supported URL schemes are 'http[s], 'socks4[h]', and 'socks5[h]'
 	max_results = 200, # maximum unique urls to return
 	min_sleep = 15, # minimum sleep between page requests
 	max_sleep = 30, # maximum sleep between page requests
