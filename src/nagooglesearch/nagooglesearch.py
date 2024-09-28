@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-import json, os, random, re, requests, time, urllib.parse
+import datetime, json, os, random, re, requests, time, urllib.parse
 
 from bs4 import BeautifulSoup
 
@@ -29,6 +29,7 @@ def get_tbs(date_from, date_to):
 
 class SearchClient:
 
+	__session = None
 	__error = ""
 	__init_error = "INIT_ERROR"
 	__requests_error = "REQUESTS_EXCEPTION"
@@ -112,20 +113,25 @@ class SearchClient:
 	def __get_url(self, path = "/", search_parameters = {}):
 		return urllib.parse.urlunsplit(("https", ("www.google.{0}").format(str(self.__tld).lower()), path, urllib.parse.urlencode(search_parameters, doseq = True) if search_parameters else "", ""))
 
+	def __get_paginated_search_url(self):
+		url = self.__urls["search"] + ("&start={0}").format(self.__pagination["start"]) if self.__pagination["start"] > 0 else self.__urls["search_from_homepage"]
+		self.__pagination["start"] += self.__pagination["num"]
+		return url
+
 	def __get_headers(self, user_agent):
 		if not user_agent:
 			user_agent = get_random_user_agent()
 		return {
+			"User-Agent": str(user_agent),
+			"Accept-Language": "en-US, *",
 			"Accept": "*/*",
-			"Accept-Language": "*",
 			"Referer": self.__urls["homepage"],
-			"Upgrade-Insecure-Requests": "1",
-			"User-Agent": str(user_agent)
+			"Upgrade-Insecure-Requests": "1"
 		}
 
 	def __get_cookies(self):
 		return {
-			"SOCS": "CAESHAgCEhJnd3NfMjAyNDA5MjMtMF9SQzEaAmRlIAEaBgiApc23Bg" # NOTE: New cookie consent method. This cookie is valid for 13 months, created on 2024-09-23.
+			"SOCS": "CAESHAgCEhJnd3NfMjAyNDA5MjMtMF9SQzEaAmRlIAEaBgiApc23Bg" # NOTE: New cookie consent method. Reject all. This cookie is valid for 13 months, created on 2024-09-23.
 		}
 
 	def __get_proxies(self, proxy):
@@ -172,12 +178,12 @@ class SearchClient:
 			self.__print("Error", "Cannot convert the 'max_sleep' parameter to the integer type.")
 		return max_sleep
 
-	def __get_page(self, session, url):
+	def __get_page(self, url):
 		self.__print("Request", url)
 		html = ""
 		response = None
 		try:
-			response = session.get(url, headers = self.__headers, verify = False, allow_redirects = True, timeout = 30)
+			response = self.__session.get(url, headers = self.__headers, verify = False, allow_redirects = True, timeout = 30)
 			self.__print("Status Code", response.status_code)
 			if response.status_code == 200:
 				html = response.text
@@ -191,28 +197,46 @@ class SearchClient:
 				response.close()
 		return html
 
-	def __get_paginated_search_url(self):
-		url = self.__urls["search"] + ("&start={0}").format(self.__pagination["start"]) if self.__pagination["start"] > 0 else self.__urls["search_from_homepage"]
-		self.__pagination["start"] += self.__pagination["num"]
-		return url
+	def __update_consent_cookie(self):
+		# NOTE: Old cookie consent method.
+		cookies = self.__session.cookies.get_dict()
+		key = "CONSENT"
+		if key in cookies and re.search(r"PENDING\+[\d]+", cookies[key], re.IGNORECASE):
+			self.__print("Info", ("Looks like your IP address is originating from an EU location. Your search results may vary. Attempting to work around this by updating the '{0}' cookie...").format(key))
+			cookies[key] = ("YES+shp.gws-{0}-0-RC1.en+FX+{1}").format(datetime.date.today().strftime("%Y%m%d"), cookies[key].split("+", 1)[-1])
+			self.__session.cookies.clear()
+			self.__session.cookies.update(cookies)
+			self.__print("Updated Cookies", self.__session.cookies.get_dict(), True)
 
-	def __validate_url(self, url):
-		# self.__print("Anchor", url)
-		link = ""
-		url = urllib.parse.urlsplit(url)
+	def __get_links(self, html):
+		tmp = []
+		soup = BeautifulSoup(html, "html.parser")
+		search = soup.find(id = "search")
+		if search:
+			tmp = search.find_all("a", href = True)
+		else:
+			for identifier in ["gbar", "top_nav", "searchform"]:
+				element = soup.find(id = identifier)
+				if element:
+					element.clear()
+			tmp = soup.find_all("a", href = True)
+		return tmp
+
+	def __get_url_from_link(self, link):
+		tmp = ""
+		url = urllib.parse.urlsplit(link)
+		scheme = url.scheme.lower()
 		domain = url.netloc.lower()
-		if domain and "google" not in domain and not domain.endswith("goo.gl"):
-			link = url.geturl()
+		if domain and "google" not in domain:
+			if not domain.endswith("goo.gl") and scheme and "google" not in scheme:
+				tmp = url.geturl()
 		else:
 			query_string = urllib.parse.parse_qs(url.query)
 			for key in query_string:
-				if key in ["q", "u", "url"]:
-					url = urllib.parse.urlsplit(query_string[key][0])
-					domain = url.netloc.lower()
-					if domain and "google" not in domain and not domain.endswith("goo.gl"):
-						link = url.geturl()
-						break
-		return link
+				if key in ["q", "u", "link"]:
+					tmp = self.__get_url_from_link(query_string[key][0])
+					break
+		return tmp
 
 	def search(self):
 		results = set()
@@ -221,46 +245,29 @@ class SearchClient:
 			self.__print("Headers", self.__headers, True)
 			self.__print("Cookies", self.__cookies, True)
 			self.__print("Proxies", self.__proxies, True)
-			session = requests.Session()
-			session.max_redirects = 10
-			session.cookies.update(self.__cookies)
-			session.proxies = self.__proxies
-			self.__get_page(session, self.__urls["homepage"])
+			self.__session = requests.Session()
+			self.__session.max_redirects = 10
+			self.__session.cookies.update(self.__cookies)
+			self.__session.proxies = self.__proxies
+			self.__get_page(self.__urls["homepage"])
 			if not self.__error:
-				cookies = session.cookies.get_dict()
-				key = "CONSENT"
-				if key in cookies and re.search(r"PENDING\+[\d]+", cookies[key], re.IGNORECASE):
-					# NOTE: Old cookie consent method.
-					self.__print("Info", ("Looks like your IP address is originating from an EU location. Your search results may vary. Attempting to work around this by updating the '{0}' cookie...").format(key))
-					cookies[key] = ("YES+shp.gws-20240923-0-RC1.fr+F+{0}").format(cookies[key].split("+", 1)[-1])
-					session.cookies.clear()
-					session.cookies.update(cookies)
-					self.__print("Updated Cookies", session.cookies.get_dict(), True)
+				self.__update_consent_cookie()
 				while True:
 					time.sleep(random.randint(self.__min_sleep, self.__max_sleep))
-					html = self.__get_page(session, self.__get_paginated_search_url())
-					if self.__error:
+					html = self.__get_page(self.__get_paginated_search_url())
+					if self.__error or not html:
 						break
-					soup = BeautifulSoup(html, "html.parser")
-					anchors = soup.find(id = "search")
-					if anchors:
-						anchors = anchors.find_all("a", href = True)
-					else:
-						for identifier in ["gbar", "top_nav", "searchform"]:
-							identifier = soup.find(id = identifier)
-							if identifier:
-								identifier.clear()
-						anchors = soup.find_all("a", href = True)
 					found = False
-					for anchor in anchors:
-						anchor = self.__validate_url(anchor["href"])
-						if anchor:
+					for link in self.__get_links(html):
+						# self.__print("Link", link["href"])
+						url = self.__get_url_from_link(link["href"])
+						if url:
 							found = True
-							results.add(anchor)
+							results.add(url)
 					if not found or len(results) >= self.__max_results:
 						break
 				results = sorted(results, key = str.casefold)
-			session.close()
+			self.__session.close()
 		results = list(results)
 		# self.__print("Results", results, True)
 		return results
