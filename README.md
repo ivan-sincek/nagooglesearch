@@ -2,13 +2,11 @@
 
 Not another Google searching library. Just kidding - it is.
 
-Tested on Kali Linux v2024.2 (64-bit).
-
 Made for educational purposes. I hope it will help!
 
 Future plans:
 
-* ability to set (rotate) search parameters, user agents, and proxies without the need for reinitialization.
+* ability to set/rotate search parameters, user agents, and proxies without reinitialization.
 
 ## Table of Contents
 
@@ -42,7 +40,7 @@ python3 -m pip install --upgrade build
 
 python3 -m build
 
-python3 -m pip install dist/nagooglesearch-7.4-py3-none-any.whl
+python3 -m pip install dist/nagooglesearch-8.0-py3-none-any.whl
 ```
 
 ## Usage
@@ -52,13 +50,14 @@ python3 -m pip install dist/nagooglesearch-7.4-py3-none-any.whl
 Default values:
 
 ```python
-nagooglesearch.SearchClient(
+nagooglesearch.GoogleClient(
 	tld = "com",
 	homepage_parameters = {
 		"btnK": "Google+Search",
 		"source": "hp"
 	},
-	search_parameters = {},
+	search_parameters = {
+	},
 	user_agent = "",
 	proxy = "",
 	max_results = 100,
@@ -70,10 +69,10 @@ nagooglesearch.SearchClient(
 
 **Only domains without they keyword `google` and not ending with the keyword `goo.gl` are accepted as valid results. The final output is a unique and sorted list of URLs.**
 
-Example:
+Example, standard:
 
 ```python
-from nagooglesearch import nagooglesearch
+import nagooglesearch
 
 # the following query string parameters are set only if 'start' query string parameter is not set or is equal to zero
 # simulate a homepage search
@@ -85,7 +84,7 @@ homepage_parameters = {
 # search the internet for additional query string parameters
 search_parameters = {
 	"q": "site:*.example.com intext:password", # search query
-	"tbs": "li:1", # specify 'li:1' for verbatim search, i.e., do not search alternate spellings, etc.
+	"tbs": "li:1", # specify 'li:1' for verbatim search (no alternate spellings, etc.)
 	"hl": "en",
 	"lr": "lang_en",
 	"cr": "countryUS",
@@ -94,24 +93,21 @@ search_parameters = {
 	"num": "80" # number of results per page
 }
 
-client = nagooglesearch.SearchClient(
+client = nagooglesearch.GoogleClient(
 	tld = "com", # top level domain, e.g., www.google.com or www.google.hr
 	homepage_parameters = homepage_parameters, # 'search_parameters' will override 'homepage_parameters'
 	search_parameters = search_parameters,
-	user_agent = "curl/3.30.1", # will set  a random user agent if not set or is empty
-	proxy = "socks5://127.0.0.1:9050", # supported URL schemes are 'http[s], 'socks4[h]', and 'socks5[h]'
-	max_results = 200, # maximum unique urls to return
+	user_agent = "curl/3.30.1", # a random user agent will be set if none is provided
+	proxy = "socks5://127.0.0.1:9050", # one of the supported URL schemes are 'http[s]', 'socks4[h]', and 'socks5[h]'
+	max_results = 200, # maximum unique URLs to return
 	min_sleep = 15, # minimum sleep between page requests
 	max_sleep = 30, # maximum sleep between page requests
-	debug = True # show debug output
+	debug = True # enable debug output
 )
 
 urls = client.search()
 
-if client.get_error() == "INIT_ERROR":
-	print("[ Initialization Error ]")
-	# do something
-elif client.get_error() == "REQUESTS_EXCEPTION":
+if client.get_error() == "REQUESTS_EXCEPTION":
 	print("[ Requests Exception ]")
 	# do something
 elif client.get_error() == "429_TOO_MANY_REQUESTS":
@@ -123,29 +119,28 @@ for url in urls:
 	# do something
 ```
 
-If `max_results` is set to, e.g., `200` and `num` is set to, e.g., `80`, then, maximum unique urls that could be returned could actually reach `240`.
+If `max_results` is set to, e.g., `200` and `num` is set to, e.g., `80`, then, maximum unique URLs that could be returned could actually reach `240`.
 
-Check the list of user agents [here](https://github.com/ivan-sincek/nagooglesearch/blob/main/src/nagooglesearch/user_agents.txt). For more user agents, check [scrapeops.io](https://scrapeops.io).
+Check the list of user agents [here](https://github.com/ivan-sincek/bot-safe-agents/blob/main/src/bot_safe_agents/user_agents.txt). For more user agents, check [scrapeops.io](https://scrapeops.io).
 
 ### Shortest Possible
 
-Example:
+Example, shortest possible:
 
 ```python
-from nagooglesearch import nagooglesearch
+import nagooglesearch
 
-urls = nagooglesearch.SearchClient(search_parameters = {"q": "site:*.example.com intext:password"}).search()
+urls = nagooglesearch.GoogleClient(search_parameters = {"q": "site:*.example.com intext:password"}).search()
 
 # do something
 ```
 
 ### Time Sensitive Search
 
-Example (e.g., do not show results older than 6 months):
+Example, do not show results older than 6 months:
 
 ```python
-from nagooglesearch import nagooglesearch
-import dateutil.relativedelta as relativedelta
+import nagooglesearch, dateutil.relativedelta as relativedelta
 
 def get_tbs(months):
 	today = datetime.datetime.today()
@@ -160,24 +155,24 @@ search_parameters = {
 
 ### User Agents
 
-Example (get a random user agent):
+Example, get all user agents:
 
 ```python
-from nagooglesearch import nagooglesearch
+import nagooglesearch
 
-user_agent = nagooglesearch.get_random_user_agent()
-print(user_agent)
+user_agents = nagooglesearch.get_all_user_agents()
+print(user_agents)
 
 # do something
 ```
 
-Example (get all user agents):
+Example, get a random user agent:
 
 ```python
-from nagooglesearch import nagooglesearch
+import nagooglesearch
 
-user_agents = nagooglesearch.get_all_user_agents()
-print(user_agents)
+user_agent = nagooglesearch.get_random_user_agent()
+print(user_agent)
 
 # do something
 ```

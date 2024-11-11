@@ -1,2 +1,1 @@
 include src/nagooglesearch/*.py
-include src/nagooglesearch/*.txt
