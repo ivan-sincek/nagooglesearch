@@ -40,7 +40,7 @@ python3 -m pip install --upgrade build
 
 python3 -m build
 
-python3 -m pip install dist/nagooglesearch-8.0-py3-none-any.whl
+python3 -m pip install dist/nagooglesearch-8.1-py3-none-any.whl
 ```
 
 ## Usage
@@ -122,6 +122,8 @@ for url in urls:
 If `max_results` is set to, e.g., `200` and `num` is set to, e.g., `80`, then, maximum unique URLs that could be returned could actually reach `240`.
 
 Check the list of user agents [here](https://github.com/ivan-sincek/bot-safe-agents/blob/main/src/bot_safe_agents/user_agents.txt). For more user agents, check [scrapeops.io](https://scrapeops.io).
+
+If you keep getting no results, you may need to refresh your [tracking cookies](https://github.com/ivan-sincek/nagooglesearch/blob/main/src/nagooglesearch/nagooglesearch.py#L167).
 
 ### Shortest Possible
 

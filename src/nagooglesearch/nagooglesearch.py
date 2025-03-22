@@ -168,10 +168,12 @@ class GoogleClient:
 		"""
 		Get HTTP cookies.\n
 		This is a new cookie consent mechanism.\n
-		The 'SOCS' cookie rejects all tracking and is valid for 13 months, created on 2024-09-23.
+		The 'SOCS' and '__Secure-ENID' cookies rejects all tracking and are valid for 13 months, created on 2025-03-22.
+		More at: https://policies.google.com/technologies/cookies/embedded?hl=en-US
 		"""
 		return {
-			"SOCS": "CAESHAgCEhJnd3NfMjAyNDA5MjMtMF9SQzEaAmRlIAEaBgiApc23Bg"
+			"SOCS": "CAESHAgBEhJnd3NfMjAyNTAzMjAtMF9SQzEaAmhyIAEaBgiA-_e-Bg",
+			"__Secure-ENID": "26.SE=E11y2NVkgAIHFQhBo6NIEWXowdKAqBlC7jgTI4SmEkZPeaiYTVxGTwH58I_HQZJETqHrOX8tZfB-b1WRrngoymx8ge7XPctkcG_AVWImTm8UziZVe14Vci8ozFhzm9iu9DlUVh3VTOsd4FcCBbavTonHe2vMxN1olFRLAtz6zklzCSaABwhIxpMerzBDRH-Yz3m4qnaxLLWg___1YBb8nhQLzD97yG7HXkT3XvPA91535qkn7CI0P0BmQ_sOiTvmQ2-d4TwLx1WggkpE2EavBe3FO3MYSehbA_H-qYqG6FqSl1D6DglEPey9"
 		}
 
 	def __update_consent_cookie(self):
