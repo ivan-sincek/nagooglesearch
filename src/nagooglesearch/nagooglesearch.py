@@ -168,7 +168,7 @@ class GoogleClient:
 		"""
 		Get HTTP cookies.\n
 		This is a new cookie consent mechanism.\n
-		The 'SOCS' and '__Secure-ENID' cookies rejects all tracking and are valid for 13 months, created on 2025-03-22.
+		'SOCS' and '__Secure-ENID' cookies reject all tracking and are valid for 13 months, created on 2025-03-22.
 		More at: https://policies.google.com/technologies/cookies/embedded?hl=en-US
 		"""
 		return {
