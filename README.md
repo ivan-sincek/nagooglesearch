@@ -40,7 +40,7 @@ python3 -m pip install --upgrade build
 
 python3 -m build
 
-python3 -m pip install dist/nagooglesearch-8.1-py3-none-any.whl
+python3 -m pip install dist/nagooglesearch-8.2-py3-none-any.whl
 ```
 
 ## Usage
@@ -58,6 +58,8 @@ nagooglesearch.GoogleClient(
 	},
 	search_parameters = {
 	},
+	cookies = {
+	},
 	user_agent = "",
 	proxy = "",
 	max_results = 100,
@@ -68,6 +70,10 @@ nagooglesearch.GoogleClient(
 ```
 
 **Only domains without they keyword `google` and not ending with the keyword `goo.gl` are accepted as valid results. The final output is a unique and sorted list of URLs.**
+
+**Google frequently changes cookies, so you may need to specify your own if the default ones no longer work.**
+
+Default cookies can be found [here](https://github.com/ivan-sincek/nagooglesearch/blob/main/src/nagooglesearch/nagooglesearch.py#L169).
 
 Example, standard:
 
@@ -93,10 +99,16 @@ search_parameters = {
 	"num": "80" # number of results per page
 }
 
+# if the default cookies no longer work, specify new ones
+# if left empty, the default ones will be used
+cookies = {
+}
+
 client = nagooglesearch.GoogleClient(
 	tld = "com", # top level domain, e.g., www.google.com or www.google.hr
 	homepage_parameters = homepage_parameters, # 'search_parameters' will override 'homepage_parameters'
 	search_parameters = search_parameters,
+	cookies = cookies,
 	user_agent = "curl/3.30.1", # a random user agent will be set if none is provided
 	proxy = "socks5://127.0.0.1:9050", # one of the supported URL schemes are 'http[s]', 'socks4[h]', and 'socks5[h]'
 	max_results = 200, # maximum unique URLs to return
@@ -122,8 +134,6 @@ for url in urls:
 If `max_results` is set to, e.g., `200` and `num` is set to, e.g., `80`, then, maximum unique URLs that could be returned could actually reach `240`.
 
 Check the list of user agents [here](https://github.com/ivan-sincek/bot-safe-agents/blob/main/src/bot_safe_agents/user_agents.txt). For more user agents, check [scrapeops.io](https://scrapeops.io).
-
-If you keep getting no results, you may need to refresh your [tracking cookies](https://github.com/ivan-sincek/nagooglesearch/blob/main/src/nagooglesearch/nagooglesearch.py#L167).
 
 ### Shortest Possible
 

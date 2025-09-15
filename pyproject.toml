@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "nagooglesearch"
-version = "8.1"
+version = "8.2"
 authors = [{ name = "Ivan Sincek" }]
 description = "Not another Google searching tool."
 readme = "README.md"
@@ -18,6 +18,9 @@ dependencies = ["bot_safe_agents>=1.0", "requests>=2.31.0", "bs4>=0.0.1", "beaut
 
 [project.urls]
 "Homepage" = "https://github.com/ivan-sincek/nagooglesearch"
+
+[tool.setuptools]
+license-files = []
 
 [tool.setuptools.packages.find]
 where = ["src"]

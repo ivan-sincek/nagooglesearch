@@ -62,6 +62,8 @@ class GoogleClient:
 		},
 		search_parameters: dict[str, str] = {
 		},
+		cookies: dict[str, str] = {
+		},
 		user_agent: str = "",
 		proxy: str = "",
 		max_results: int = 100,
@@ -77,8 +79,8 @@ class GoogleClient:
 		self.__search_parameters: dict[str, str] = search_parameters
 		self.__pagination: GooglePagination = self.__get_pagination()
 		self.__urls: GoogleURLs = self.__get_urls()
-		self.__headers: dict[str, str] = self.__get_headers(user_agent)
-		self.__cookies: dict[str, str] = self.__get_cookies()
+		self.__headers: dict[str, str] = self.__get_default_headers(user_agent)
+		self.__cookies: dict[str, str] = self.__get_default_cookies() if not cookies else cookies
 		self.__proxies: dict[str, str] = self.__get_proxies(proxy)
 		self.__max_results: int = max_results
 		self.__min_sleep: int = min_sleep
@@ -150,7 +152,7 @@ class GoogleClient:
 		self.__pagination.start += self.__pagination.num
 		return url
 
-	def __get_headers(self, user_agent: str = ""):
+	def __get_default_headers(self, user_agent: str = ""):
 		"""
 		Get HTTP request headers.
 		"""
@@ -164,7 +166,7 @@ class GoogleClient:
 			"Upgrade-Insecure-Requests": "1"
 		}
 
-	def __get_cookies(self):
+	def __get_default_cookies(self):
 		"""
 		Get HTTP cookies.\n
 		This is a new cookie consent mechanism.\n
@@ -175,6 +177,13 @@ class GoogleClient:
 			"SOCS": "CAESHAgBEhJnd3NfMjAyNTAzMjAtMF9SQzEaAmhyIAEaBgiA-_e-Bg",
 			"__Secure-ENID": "26.SE=E11y2NVkgAIHFQhBo6NIEWXowdKAqBlC7jgTI4SmEkZPeaiYTVxGTwH58I_HQZJETqHrOX8tZfB-b1WRrngoymx8ge7XPctkcG_AVWImTm8UziZVe14Vci8ozFhzm9iu9DlUVh3VTOsd4FcCBbavTonHe2vMxN1olFRLAtz6zklzCSaABwhIxpMerzBDRH-Yz3m4qnaxLLWg___1YBb8nhQLzD97yG7HXkT3XvPA91535qkn7CI0P0BmQ_sOiTvmQ2-d4TwLx1WggkpE2EavBe3FO3MYSehbA_H-qYqG6FqSl1D6DglEPey9"
 		}
+
+	def set_cookies(self, cookies: dict[str, str]):
+		"""
+		Set HTTP cookies.\n
+		Google frequently changes HTTP cookies, so you may need to specify your own if the built-in ones no longer work.
+		"""
+		self.__cookies = cookies
 
 	def __update_consent_cookie(self):
 		"""
